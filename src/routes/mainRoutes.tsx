@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 
-const MainPage = lazy(() => import('../pages/MainPage'));
-const CookiePage = lazy(() => import('../pages/CookiePage'));
+const MainPage = lazy(() => import('@/pages/MainPage'));
+const CookiePage = lazy(() => import('@/pages/user/CookiePage'));
 
 export const mainRoutes = [
   { path: '/', element: MainPage, index: true },

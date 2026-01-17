@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
-import { SOCIAL_PROVIDERS, type SocialProvider } from "../constants/SocialProvider";
+import { SOCIAL_PROVIDERS } from "@/constants/SocialProvider";
+import type { SocialProvider } from "@/constants/SocialProvider";
 import { useNavigate } from "react-router-dom";
 import { Container, Box, TextField, Button, Typography, Alert, Stack, IconButton, Tooltip, Divider } from "@mui/material";
-import useAuthStore from '../stores/useAuthStore';
-import { apiFetch } from '../util/fetchUtil';
-import { BACKEND_API_BASE_URL } from '../config/backend';
-import GoogleIcon from "../components/icons/GoogleIcon";
-import NaverIcon from "../components/icons/NaverIcon";
+import useAuthStore from '@/stores/useAuthStore';
+import type { AuthState } from '@/stores/useAuthStore';
+import { apiFetch } from '@/util/fetchUtil';
+import { BACKEND_API_BASE_URL } from '@/config/backend';
+import GoogleIcon from '@/components/common/icons/GoogleIcon';
+import NaverIcon from '@/components/common/icons/NaverIcon';
 
 const LoginPage = () => {
     const navigate = useNavigate();
-    const loginStore = useAuthStore((s: import('../stores/useAuthStore').AuthState) => s.login);
+    const loginStore = useAuthStore((s: AuthState) => s.login);
 
     // 자체 로그인시 username/password 변수
     const [username, setUsername] = useState<string>("");

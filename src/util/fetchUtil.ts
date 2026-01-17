@@ -1,25 +1,30 @@
-import { BACKEND_API_BASE_URL } from '../config/backend';
+import { useLoadingStore } from '@/stores/useLoadingStore';
+import { BACKEND_API_BASE_URL } from '@/config/backend';
 
-// Generic fetch wrapper that prefixes the backend base URL and applies sensible defaults.
-export const apiFetch = async (pathOrUrl: string, options: RequestInit = {}) => {
-  const isAbsolute = /^https?:\/\//i.test(pathOrUrl);
-  const url = isAbsolute ? pathOrUrl : `${BACKEND_API_BASE_URL}${pathOrUrl}`;
+export const apiFetch = async (url: string, options: RequestInit = {}, { showLoading = true } = {}) => {
+  const isAbsolute = /^https?:\/\//i.test(url);
+  const fullUrl = isAbsolute ? url : `${BACKEND_API_BASE_URL}${url}`;
 
-  // Ensure headers object exists
-  const headers = new Headers(options.headers || {});
+  const { setLoading } = useLoadingStore.getState();
+  if (showLoading) setLoading(true);
 
-  // If a body is present and Content-Type isn't set, default to JSON
-  if (options.body && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
+  try {
+    const headers = new Headers(options.headers || {});
+
+    if (options.body && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+
+    const finalOptions: RequestInit = {
+      credentials: 'include',
+      ...options,
+      headers,
+    };
+
+    return await fetch(fullUrl, finalOptions);
+  } finally {
+    if (showLoading) setLoading(false);  // 옵션에 따라 로딩 끄기
   }
-
-  const finalOptions: RequestInit = {
-    credentials: 'include', // include cookies by default (social login flows rely on this)
-    ...options,
-    headers,
-  };
-
-  return fetch(url, finalOptions);
 };
 
 // Refresh access token using refresh token stored in localStorage
@@ -30,7 +35,7 @@ export const refreshAccessToken = async () => {
   const res = await apiFetch('/jwt/refresh', {
     method: 'POST',
     body: JSON.stringify({ refreshToken }),
-  });
+  }, { showLoading: false });
 
   if (!res.ok) throw new Error('AccessToken 갱신 실패');
 
@@ -40,30 +45,25 @@ export const refreshAccessToken = async () => {
   return data.accessToken;
 };
 
-// Fetch with Authorization header set from stored access token.
-// On 401, try to refresh and retry once. On refresh failure, clear tokens and redirect to login.
 export const fetchWithAccess = async (pathOrUrl: string, options: RequestInit = {}) => {
   let accessToken = localStorage.getItem('accessToken');
 
-  // Ensure headers object exists and is mutable
   const headers = new Headers(options.headers || {});
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
 
-  // If a body is present and Content-Type isn't set, default to JSON
   if (options.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
   const finalOptions: RequestInit = { credentials: 'include', ...options, headers };
 
-  let response = await apiFetch(pathOrUrl, finalOptions);
+  let response = await apiFetch(pathOrUrl, finalOptions, { showLoading: true });  // 로딩 적용
 
   if (response.status === 401) {
     try {
       accessToken = await refreshAccessToken();
-      // update header and retry
       headers.set('Authorization', `Bearer ${accessToken}`);
-      response = await apiFetch(pathOrUrl, { ...finalOptions, headers });
+      response = await apiFetch(pathOrUrl, { ...finalOptions, headers }, { showLoading: true });  // 로딩 적용
     } catch (err) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -73,7 +73,6 @@ export const fetchWithAccess = async (pathOrUrl: string, options: RequestInit = 
   }
 
   if (!response.ok) {
-    // attempt to include response body in error
     const text = await response.text().catch(() => null);
     throw new Error(text ? `HTTP 오류 ${response.status}: ${text}` : `HTTP 오류 ${response.status}`);
   }

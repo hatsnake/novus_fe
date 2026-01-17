@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Box, Typography, CircularProgress } from "@mui/material";
-import useAuthStore from "../stores/useAuthStore";
-import { apiFetch } from '../util/fetchUtil';
+import useAuthStore from "@/stores/useAuthStore";
+import { apiFetch } from '@/util/fetchUtil';
 
 const CookiePage = () => {
     const navigate = useNavigate();

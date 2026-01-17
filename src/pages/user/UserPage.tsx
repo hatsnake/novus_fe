@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
-import { fetchWithAccess } from "../util/fetchUtil";
-import { Container, Box, Typography, CircularProgress, Alert, Stack, Button, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, TextField, IconButton, DialogContentText, Snackbar } from "@mui/material";
+import { fetchWithAccess } from "@/util/fetchUtil";
+import { Container, Box, Typography, CircularProgress, Alert, Stack, Button, TextField, IconButton } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import BorderColorIcon from '@mui/icons-material/BorderColor';
-import { BACKEND_API_BASE_URL } from '../config/backend';
 import { useNavigate } from "react-router-dom";
-import useAuthStore from "../stores/useAuthStore";
-import NaverIcon from "../components/icons/NaverIcon";
-import GoogleIcon from "../components/icons/GoogleIcon";
-import ConfirmDialog from "../components/ConfirmDialog";
-import ToastMessage from "../components/ToastMessage";
+import useAuthStore from "@/stores/useAuthStore";
+import NaverIcon from "@/components/common/icons/NaverIcon";
+import GoogleIcon from "@/components/common/icons/GoogleIcon";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import ToastMessage from "@/components/common/ToastMessage";
 
 const UserPage = () => {
     const navigate = useNavigate();
@@ -33,27 +32,27 @@ const UserPage = () => {
 
     // 페이지 방문시 유저 정보 요청
     useEffect(() => {
-        const fetchUserInfo = async () => {
-            try {
-                const res = await fetchWithAccess(`${BACKEND_API_BASE_URL}/user`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                });
-
-                if (!res.ok) throw new Error("유저 정보 불러오기 실패");
-
-                const data = await res.json();
-                setUserInfo(data);
-                setEditNickname(data.nickname);
-                setEditEmail(data.email);
-            } catch (err) {
-                setError("유저 정보를 불러오지 못했습니다.");
-            }
-        };
-
         fetchUserInfo();
     }, []);
+
+    const fetchUserInfo = async () => {
+        try {
+            const res = await fetchWithAccess(`/user`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            if (!res.ok) throw new Error("유저 정보 불러오기 실패");
+
+            const data = await res.json();
+            setUserInfo(data);
+            setEditNickname(data.nickname);
+            setEditEmail(data.email);
+        } catch (err) {
+            setError("유저 정보를 불러오지 못했습니다.");
+        }
+    };
 
     const handleUpdate = async () => {
         // 비정상적인 호출 방지
@@ -71,7 +70,7 @@ const UserPage = () => {
         setUpdateLoading(true);
         setError('');
         try {
-            const res = await fetchWithAccess(`${BACKEND_API_BASE_URL}/user`, {
+            const res = await fetchWithAccess(`/user`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: "include",
@@ -96,7 +95,7 @@ const UserPage = () => {
         setDeleteLoading(true);
         setError('');
         try {
-            const res = await fetchWithAccess(`${BACKEND_API_BASE_URL}/user`, {
+            const res = await fetchWithAccess(`/user`, {
                 method: 'DELETE',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -122,7 +121,7 @@ const UserPage = () => {
         }
     };
 
-    const handleToastClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+    const handleToastClose = (_event?: React.SyntheticEvent | Event, reason?: string) => {
         if (reason === 'clickaway') return;
         setToastOpen(false);
     };

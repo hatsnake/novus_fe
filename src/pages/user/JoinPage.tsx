@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Box, TextField, Button, Typography, Alert, Stack } from "@mui/material";
-import { apiFetch } from '../util/fetchUtil';
+import { apiFetch } from '@/util/fetchUtil';
 
 const JoinPage = () => {
     const navigate = useNavigate();
