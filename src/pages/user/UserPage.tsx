@@ -180,6 +180,7 @@ const UserPage = () => {
                                 <Button 
                                     variant="contained"
                                     size="large"
+                                    disableElevation
                                     onClick={() => setUpdateConfirmOpen(true)}
                                     disabled={updateLoading}
                                     sx={{ flex: 1, bgcolor: 'warning.light' }}
@@ -199,8 +200,9 @@ const UserPage = () => {
                             ) : (
                                 <Button 
                                     variant="contained" 
-                                    onClick={() => setConfirmOpen(true)}
                                     size="large"
+                                    disableElevation
+                                    onClick={() => setConfirmOpen(true)}
                                     sx={{ flex: 1, bgcolor: 'error.main' }}
                                     component="span"
                                 >
