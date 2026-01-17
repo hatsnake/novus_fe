@@ -96,10 +96,18 @@ const LoginPage = () => {
                             로그인
                         </Button>
                     </Stack>
+
+                    <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 3 }}>
+                        <Button size="small" variant="text" onClick={() => navigate('/find-id')} sx={{ textTransform: 'none', color: '#0000008a' }}>아이디 찾기</Button>
+                        <Divider orientation="vertical" flexItem sx={{ height: 20, alignSelf: 'center' }} />
+                        <Button size="small" variant="text" onClick={() => navigate('/find-password')} sx={{ textTransform: 'none', color: '#0000008a' }}>비밀번호 찾기</Button>
+                        <Divider orientation="vertical" flexItem sx={{ height: 20, alignSelf: 'center' }} />
+                        <Button size="small" variant="text" onClick={() => navigate('/join')} sx={{ textTransform: 'none', color: '#0000008a' }}>회원가입</Button>
+                    </Stack>
                 </Box>
 
                 {/* 구분선 + 텍스트 */}
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 3 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
                     <Divider sx={{ flex: 1 }} />
                     <Typography variant="caption" sx={{ mx: 2, color: 'text.secondary' }}>또는</Typography>
                     <Divider sx={{ flex: 1 }} />

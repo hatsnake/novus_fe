@@ -1,9 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Container, Box, Typography, CircularProgress, Alert } from "@mui/material";
+import { Container, Box, Typography, CircularProgress } from "@mui/material";
 import useAuthStore from "../stores/useAuthStore";
 import { apiFetch } from '../util/fetchUtil';
-import { BACKEND_API_BASE_URL } from "../config/backend";
 
 const CookiePage = () => {
     const navigate = useNavigate();
@@ -49,8 +48,6 @@ const CookiePage = () => {
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     페이지가 자동으로 이동하지 않으면 잠시 후 다시 시도하세요.
                 </Typography>
-                {/* 예외적인 오류를 사용자에게 보여주고 싶다면 아래 Alert를 사용하세요. */}
-                {/* <Alert severity="error" sx={{ mt: 2 }}>소셜 로그인 실패</Alert> */}
             </Box>
         </Container>
     );

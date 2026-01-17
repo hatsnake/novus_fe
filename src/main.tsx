@@ -13,8 +13,6 @@ const theme = createTheme({
 createRoot(document.getElementById('root')!).render(
   <ThemeProvider theme={theme}>
     <CssBaseline />
-      <BrowserRouter>
-          <App />
-      </BrowserRouter>
+    <App />
   </ThemeProvider>
 )

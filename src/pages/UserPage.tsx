@@ -1,11 +1,15 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchWithAccess } from "../util/fetchUtil";
-import { Container, Box, Typography, CircularProgress, Alert, Stack, Button, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, TextField } from "@mui/material";
+import { Container, Box, Typography, CircularProgress, Alert, Stack, Button, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, TextField, IconButton, DialogContentText, Snackbar } from "@mui/material";
+import DeleteIcon from '@mui/icons-material/Delete';
+import BorderColorIcon from '@mui/icons-material/BorderColor';
 import { BACKEND_API_BASE_URL } from '../config/backend';
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../stores/useAuthStore";
 import NaverIcon from "../components/icons/NaverIcon";
 import GoogleIcon from "../components/icons/GoogleIcon";
+import ConfirmDialog from "../components/ConfirmDialog";
+import ToastMessage from "../components/ToastMessage";
 
 const UserPage = () => {
     const navigate = useNavigate();
@@ -17,10 +21,12 @@ const UserPage = () => {
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [updateConfirmOpen, setUpdateConfirmOpen] = useState(false);
 
-    // 입력 상태
     const [editNickname, setEditNickname] = useState('');
     const [editEmail, setEditEmail] = useState('');
     const [updateLoading, setUpdateLoading] = useState(false);
+
+    const [toastOpen, setToastOpen] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
 
     const NAVER_PROVIDER = 'NAVER';
     const GOOGLE_PROVIDER = 'GOOGLE';
@@ -75,8 +81,9 @@ const UserPage = () => {
             if (!res.ok) throw new Error("정보 수정 실패");
 
             const updatedData = await res.json();
-            setUserInfo(updatedData);
-            alert("정보가 수정되었습니다.");
+            setUserInfo(prev => ({ ...(prev ?? {}), ...updatedData }));
+            setToastMessage('정보가 수정되었습니다.');
+            setToastOpen(true);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -113,6 +120,11 @@ const UserPage = () => {
             setDeleteLoading(false);
             setConfirmOpen(false);
         }
+    };
+
+    const handleToastClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+        if (reason === 'clickaway') return;
+        setToastOpen(false);
     };
 
     return (
@@ -158,6 +170,7 @@ const UserPage = () => {
                                         fullWidth
                                         value={editNickname}
                                         onChange={(e) => setEditNickname(e.target.value)}
+                                        helperText="수정할 닉네임을 입력하세요."
                                     />
                                 </>
                             )}
@@ -166,13 +179,17 @@ const UserPage = () => {
                         <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
                             {!userInfo.social && (
                                 <Button 
-                                    variant="contained" 
+                                    variant="contained"
                                     size="large"
-                                    onClick={() => setUpdateConfirmOpen(true)} 
+                                    onClick={() => setUpdateConfirmOpen(true)}
                                     disabled={updateLoading}
-                                    sx={{ flex: 1 }}
+                                    sx={{ flex: 1, bgcolor: 'warning.light' }}
+                                    component="span"
                                 >
-                                    {updateLoading ? <CircularProgress size={24} /> : '정보 저장'}
+                                    <IconButton aria-label="edit" size="small" sx={{color: 'white', mr: 1}}>
+                                        <BorderColorIcon fontSize="small" />
+                                    </IconButton>
+                                    {updateLoading ? <CircularProgress size={24} /> : '정보 수정'}
                                 </Button>
                             )}
 
@@ -182,12 +199,15 @@ const UserPage = () => {
                                 </Typography>
                             ) : (
                                 <Button 
-                                    variant="outlined" 
-                                    color="error" 
+                                    variant="contained" 
                                     onClick={() => setConfirmOpen(true)}
                                     size="large"
-                                    sx={{ flex: 1 }}
+                                    sx={{ flex: 1, bgcolor: 'error.main' }}
+                                    component="span"
                                 >
+                                    <IconButton aria-label="delete" size="small" sx={{color: 'white', mr: 1}}>
+                                        <DeleteIcon fontSize="small" />
+                                    </IconButton>
                                     회원 탈퇴
                                 </Button>
                             )}
@@ -196,31 +216,44 @@ const UserPage = () => {
                 )}
             </Box>
 
-            <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-                <DialogTitle>회원 탈퇴</DialogTitle>
-                <DialogContent>
-                    <Typography>탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다. 계속 진행하시겠습니까?</Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setConfirmOpen(false)} disabled={deleteLoading}>취소</Button>
-                    <Button color="error" onClick={handleDelete} disabled={deleteLoading}>
-                        {deleteLoading ? <CircularProgress size={18} /> : '탈퇴하기'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            {/* replaced dialogs with ConfirmDialog component */}
+            <ConfirmDialog
+                open={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleDelete}
+                title="회원 탈퇴"
+                description="탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다. 계정을 삭제하면 되돌릴 수 없습니다."
+                icon={<DeleteIcon color="error" />}
+                confirmText="탈퇴하기"
+                cancelText="취소"
+                confirmColor="error"
+                loading={deleteLoading}
+            />
 
-            <Dialog open={updateConfirmOpen} onClose={() => setUpdateConfirmOpen(false)}>
-                <DialogTitle>정보 수정</DialogTitle>
-                <DialogContent>
-                    <Typography>입력한 정보로 변경하시겠습니까?</Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setUpdateConfirmOpen(false)} disabled={updateLoading}>취소</Button>
-                    <Button variant="contained" onClick={handleUpdate} disabled={updateLoading}>
-                        {updateLoading ? <CircularProgress size={18} /> : '수정하기'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <ConfirmDialog
+                open={updateConfirmOpen}
+                onClose={() => setUpdateConfirmOpen(false)}
+                onConfirm={handleUpdate}
+                title="정보 수정"
+                description="입력한 정보로 변경하시겠습니까? 변경 후 즉시 적용됩니다."
+                icon={<BorderColorIcon sx={{ color: 'warning.main' }} />}
+                confirmText="수정하기"
+                cancelText="취소"
+                confirmColor="warning"
+                loading={updateLoading}
+            >
+                <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2">이메일: <strong>{editEmail}</strong></Typography>
+                    <Typography variant="body2">닉네임: <strong>{editNickname}</strong></Typography>
+                </Box>
+            </ConfirmDialog>
+
+            <ToastMessage
+              open={toastOpen}
+              severity={"success"}
+              message={toastMessage}
+              onClose={handleToastClose}
+            />
         </Container>
     );
 }
