@@ -7,6 +7,7 @@ export type UserInfo = {
   nickname: string;
   email: string;
   role?: string;
+  profileImage?: string;
 };
 
 export type AuthState = {
@@ -39,7 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         await apiFetch('/user/logout', { method: 'POST' });
       } catch {}
       clearTokens();
-      set({ isLoggedIn: false });
+      set({ isLoggedIn: false, user: null });
     },
     fetchUser: async () => {
       if (!get().isLoggedIn) return;
@@ -60,7 +61,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
               username: userData.username,
               nickname: userData.nickname,
               email: userData.email,
-              role: userData.role
+              role: userData.role,
+              profileImage: userData.profileImage,
             } 
           });
         }

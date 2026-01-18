@@ -12,7 +12,9 @@ export const apiFetch = async (url: string, options: RequestInit = {}, { showLoa
     const headers = new Headers(options.headers || {});
 
     if (options.body && !headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json');
+      if (!(options.body instanceof FormData)) {
+        headers.set('Content-Type', 'application/json');
+      }
     }
 
     const finalOptions: RequestInit = {
@@ -50,10 +52,6 @@ export const fetchWithAccess = async (pathOrUrl: string, options: RequestInit = 
 
   const headers = new Headers(options.headers || {});
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
-
-  if (options.body && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
 
   const finalOptions: RequestInit = { credentials: 'include', ...options, headers };
 

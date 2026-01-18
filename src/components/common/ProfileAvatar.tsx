@@ -9,6 +9,8 @@ import {
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '@/stores/useAuthStore';
+import { BACKEND_API_BASE_URL } from '@/config/backend';
+import DefaultImage from 'boring-avatars';
 
 type ProfileAvatarProps = {
   // 필요시 props 정의
@@ -22,10 +24,13 @@ const ProfileAvatar = ({ }: ProfileAvatarProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
+  const profileImgUrl = getImageUrl(user?.profileImage);
+
   const userInfo = {
-    name: user?.nickname || 'Guest',
+    name: user?.nickname || '',
+    nickname: user?.nickname || '',
     email: user?.email || '',
-    role: user?.role || 'MEMBER'
+    role: user?.role || ''
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -47,9 +52,34 @@ const ProfileAvatar = ({ }: ProfileAvatarProps) => {
     navigate('/');
   };
 
+  function getImageUrl (path: string | undefined) {
+      if (!path) return '';
+      // 이미 http로 시작하면(외부 링크, S3 등) 그대로 사용
+      if (path.startsWith('http://') || path.startsWith('https://')) return path;
+      // 아니면 백엔드 주소 붙이기
+      return `${BACKEND_API_BASE_URL}${path}`;
+  }
+
+  // 아바타 렌더링 헬퍼 함수
+  const renderAvatar = (size: number) => {
+    if (profileImgUrl) {
+      return <Avatar src={profileImgUrl} sx={{ width: size, height: size, bgcolor: 'background.paper' }} />;
+    }
+    return (
+      <Box sx={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', lineHeight: 0 }}>
+        <DefaultImage
+          size={size}
+          name={userInfo?.nickname || 'user'} // 이름 기반으로 패턴 생성
+          variant="beam" // 'marble', 'beam', 'pixel', 'sunset', 'ring', 'bauhaus'
+          colors={['#92A1C6', '#146A7C', '#F0AB3D', '#C271B4', '#C20D90']}
+        />
+      </Box>
+    );
+  };
+
   return (
     <>
-      <Tooltip title="계정 설정">
+      <Tooltip title="">
         <IconButton
           onClick={handleMenuOpen}
           size="small"
@@ -58,7 +88,8 @@ const ProfileAvatar = ({ }: ProfileAvatarProps) => {
           aria-haspopup="true"
           aria-expanded={open ? 'true' : undefined}
         >
-          <Avatar sx={{ width: 32, height: 32 }} />
+          {/* 상단 아이콘 아바타 */}
+          {renderAvatar(32)}
         </IconButton>
       </Tooltip>
       <Menu
@@ -78,12 +109,7 @@ const ProfileAvatar = ({ }: ProfileAvatarProps) => {
               mt: 1.5,
               minWidth: 280, // 카드 너비 확보
               borderRadius: 2, // 둥근 모서리
-              '& .MuiAvatar-root': {
-                width: 32,
-                height: 32,
-                ml: -0.5,
-                mr: 1,
-              },
+              // MuiAvatar override 제거 (renderAvatar에서 직접 스타일링하므로)
               '&::before': {
                 content: '""',
                 display: 'block',
@@ -102,7 +128,8 @@ const ProfileAvatar = ({ }: ProfileAvatarProps) => {
       >
         {/* 상단 프로필 영역 */}
         <Box sx={{ px: 2.5, py: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ width: 48, height: 48 }} alt={userInfo.name} />
+          {/* 메뉴 내부 큰 아바타 */}
+          {renderAvatar(48)}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="subtitle1" fontWeight="bold" noWrap>
               {userInfo.name}

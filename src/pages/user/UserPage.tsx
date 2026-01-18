@@ -1,20 +1,37 @@
 import { useEffect, useState } from "react";
 import { fetchWithAccess } from "@/util/fetchUtil";
-import { Container, Box, Typography, CircularProgress, Alert, Stack, Button, TextField, IconButton } from "@mui/material";
+import { Container, Box, Typography, CircularProgress, Alert, Stack, Button, TextField, IconButton, Avatar, Badge, styled } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import BorderColorIcon from '@mui/icons-material/BorderColor';
+import CameraAltIcon from '@mui/icons-material/CameraAlt'; // 아이콘 추가
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "@/stores/useAuthStore";
 import NaverIcon from "@/components/common/icons/NaverIcon";
 import GoogleIcon from "@/components/common/icons/GoogleIcon";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import ToastMessage from "@/components/common/ToastMessage";
+import { BACKEND_API_BASE_URL } from "@/config/backend";
+import DefaultImage from 'boring-avatars';
+
+// 파일 인풋 숨김 처리 스타일 (MUI 권장 방식)
+const VisuallyHiddenInput = styled('input')({
+    clip: 'rect(0 0 0 0)',
+    clipPath: 'inset(50%)',
+    height: 1,
+    overflow: 'hidden',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    whiteSpace: 'nowrap',
+    width: 1,
+});
 
 const UserPage = () => {
     const navigate = useNavigate();
     const logout = useAuthStore((s) => s.logout);
 
-    const [userInfo, setUserInfo] = useState<{ username: string; nickname: string; email: string, social: boolean, socialProviderType: string } | null>(null);
+    // profileImage 타입 추가
+    const [userInfo, setUserInfo] = useState<{ username: string; nickname: string; email: string, social: boolean, socialProviderType: string, profileImage?: string } | null>(null);
     const [error, setError] = useState<string>('');
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
@@ -24,11 +41,17 @@ const UserPage = () => {
     const [editEmail, setEditEmail] = useState('');
     const [updateLoading, setUpdateLoading] = useState(false);
 
+    // [추가] 이미지 관련 상태
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string>('');
+
     const [toastOpen, setToastOpen] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
 
     const NAVER_PROVIDER = 'NAVER';
     const GOOGLE_PROVIDER = 'GOOGLE';
+
+    const profileImgUrl = getImageUrl(userInfo?.profileImage);
 
     // 페이지 방문시 유저 정보 요청
     useEffect(() => {
@@ -49,8 +72,20 @@ const UserPage = () => {
             setUserInfo(data);
             setEditNickname(data.nickname);
             setEditEmail(data.email);
+            if (data.profileImage) {
+                setPreviewUrl(getImageUrl(data.profileImage));
+            }
         } catch (err) {
             setError("유저 정보를 불러오지 못했습니다.");
+        }
+    };
+
+    // [추가] 파일 선택 핸들러
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setAvatarFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
         }
     };
 
@@ -61,28 +96,42 @@ const UserPage = () => {
             return;
         }
 
-        const payload = {
+        const formData = new FormData();
+        const userDto = {
             username: userInfo.username,
             nickname: editNickname,
-            email: editEmail,
+            email: editEmail
+        };
+        const jsonBlob = new Blob([JSON.stringify(userDto)], { type: "application/json" });
+        formData.append("dto", jsonBlob, "user.json");
+
+        if (avatarFile) {
+            formData.append("profileImage", avatarFile);
         }
 
         setUpdateLoading(true);
         setError('');
         try {
+            // [수정] Content-Type 헤더 제거 (FormData 자동 설정)
             const res = await fetchWithAccess(`/user`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
                 credentials: "include",
-                body: JSON.stringify(payload),
+                body: formData,
             });
 
             if (!res.ok) throw new Error("정보 수정 실패");
 
             const updatedData = await res.json();
             setUserInfo(prev => ({ ...(prev ?? {}), ...updatedData }));
+            
+            // 프리뷰 업데이트
+            if (updatedData.profileImage) {
+                setPreviewUrl(getImageUrl(updatedData.profileImage));
+            }
+
             setToastMessage('정보가 수정되었습니다.');
             setToastOpen(true);
+            setAvatarFile(null); // 업로드 후 파일 초기화
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -126,6 +175,30 @@ const UserPage = () => {
         setToastOpen(false);
     };
 
+    function getImageUrl (path: string | undefined) {
+        if (!path) return '';
+        // 이미 http로 시작하면(외부 링크, S3 등) 그대로 사용
+        if (path.startsWith('http://') || path.startsWith('https://')) return path;
+        // 아니면 백엔드 주소 붙이기
+        return `${BACKEND_API_BASE_URL}${path}`;
+    }
+
+    const renderAvatar = (size: number) => {
+        if (profileImgUrl) {
+            return <Avatar src={profileImgUrl} sx={{ width: size, height: size, bgcolor: 'background.paper' }} />;
+        }
+        return (
+        <Box sx={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', lineHeight: 0 }}>
+            <DefaultImage
+            size={size}
+            name={userInfo?.nickname || 'user'} // 이름 기반으로 패턴 생성
+            variant="beam" // 'marble', 'beam', 'pixel', 'sunset', 'ring', 'bauhaus'
+            colors={['#92A1C6', '#146A7C', '#F0AB3D', '#C271B4', '#C20D90']}
+            />
+        </Box>
+        );
+    };
+
     return (
         <Container maxWidth="sm">
             <Box sx={{ mt: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -139,40 +212,70 @@ const UserPage = () => {
                     </Box>
                 ) : (
                     <>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            {userInfo.social ? (
-                                <>
-                                    {userInfo.socialProviderType === NAVER_PROVIDER && (
-                                        <NaverIcon />
-                                    )}
-                                    {userInfo.socialProviderType === GOOGLE_PROVIDER && (
-                                        <GoogleIcon />
-                                    )}
-                                    <Typography variant="body1">
-                                        이메일: <strong>{userInfo.email}</strong>
-                                    </Typography>
-                                    <Typography variant="body1">
-                                        닉네임: <strong>{userInfo.nickname}</strong>
-                                    </Typography>
-                                </>
-                            ) : (
-                                <>
-                                    <TextField
-                                        label="이메일"
-                                        fullWidth
-                                        value={editEmail}
-                                        onChange={(e) => setEditEmail(e.target.value)}
-                                        helperText="수정할 이메일을 입력하세요."
-                                    />
-                                    <TextField
-                                        label="닉네임"
-                                        fullWidth
-                                        value={editNickname}
-                                        onChange={(e) => setEditNickname(e.target.value)}
-                                        helperText="수정할 닉네임을 입력하세요."
-                                    />
-                                </>
-                            )}
+                        {/* [수정] 프로필 이미지 및 입력 폼 영역 통합 */}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
+                            <Typography variant="h6">프로필 이미지</Typography>
+                            {/* [추가] 프로필 이미지 업로드 UI */}
+                            <Badge
+                                overlap="circular"
+                                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                badgeContent={
+                                    !userInfo.social && (
+                                        <IconButton
+                                            component="label"
+                                            sx={{ 
+                                                bgcolor: 'primary.main', 
+                                                color: 'white',
+                                                '&:hover': { bgcolor: 'primary.dark' },
+                                                width: 32, height: 32,
+                                                boxShadow: 2
+                                            }}
+                                        >
+                                            <CameraAltIcon sx={{ fontSize: 18 }} />
+                                            <VisuallyHiddenInput type="file" accept="image/*" onChange={handleFileChange} />
+                                        </IconButton>
+                                    )
+                                }
+                            >
+                                {renderAvatar(120)}
+                            </Badge>
+
+                            {/* 기존 입력 필드 영역 (width 100% 추가) */}
+                            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                {userInfo.social ? (
+                                    <>
+                                        {userInfo.socialProviderType === NAVER_PROVIDER && (
+                                            <NaverIcon />
+                                        )}
+                                        {userInfo.socialProviderType === GOOGLE_PROVIDER && (
+                                            <GoogleIcon />
+                                        )}
+                                        <Typography variant="body1">
+                                            이메일: <strong>{userInfo.email}</strong>
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            닉네임: <strong>{userInfo.nickname}</strong>
+                                        </Typography>
+                                    </>
+                                ) : (
+                                    <>
+                                        <TextField
+                                            label="이메일"
+                                            fullWidth
+                                            value={editEmail}
+                                            onChange={(e) => setEditEmail(e.target.value)}
+                                            helperText="수정할 이메일을 입력하세요."
+                                        />
+                                        <TextField
+                                            label="닉네임"
+                                            fullWidth
+                                            value={editNickname}
+                                            onChange={(e) => setEditNickname(e.target.value)}
+                                            helperText="수정할 닉네임을 입력하세요."
+                                        />
+                                    </>
+                                )}
+                            </Box>
                         </Box>
 
                         <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
@@ -192,7 +295,8 @@ const UserPage = () => {
                                     {updateLoading ? <CircularProgress size={24} /> : '정보 수정'}
                                 </Button>
                             )}
-
+                            
+                            {/* 기존 코드 유지 */}
                             {userInfo.social ? (
                                 <Typography sx={{ color: 'error.main', flex: 1, alignSelf: 'center' }}>
                                     ※ 소셜 로그인 회원은 탈퇴할 수 없습니다.
@@ -217,7 +321,6 @@ const UserPage = () => {
                 )}
             </Box>
 
-            {/* replaced dialogs with ConfirmDialog component */}
             <ConfirmDialog
                 open={confirmOpen}
                 onClose={() => setConfirmOpen(false)}
@@ -242,12 +345,7 @@ const UserPage = () => {
                 cancelText="취소"
                 confirmColor="warning"
                 loading={updateLoading}
-            >
-                <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2">이메일: <strong>{editEmail}</strong></Typography>
-                    <Typography variant="body2">닉네임: <strong>{editNickname}</strong></Typography>
-                </Box>
-            </ConfirmDialog>
+            />
 
             <ToastMessage
               open={toastOpen}
